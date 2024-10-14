@@ -42,9 +42,6 @@
         .img-responsive {
             margin-bottom: 20px;
         }
-        .auth-container {
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -52,34 +49,18 @@
 <div class="container">
     <h1>Math Quiz Game</h1>
 
-    <!-- Authentication Screen -->
-    <div id="auth-container" class="auth-container">
+    <!-- Login Screen -->
+    <div id="login-screen">
         <h2>Login</h2>
         <input type="email" id="email" placeholder="Email" />
         <input type="password" id="password" placeholder="Password" />
         <button onclick="login()">Login</button>
-        <p>or</p>
-        <button onclick="toggleSignup()">Create Account</button>
-    </div>
-
-    <!-- Signup Screen -->
-    <div id="signup-container" class="auth-container" style="display: none;">
-        <h2>Sign Up</h2>
-        <input type="email" id="signup-email" placeholder="Email" />
-        <input type="password" id="signup-password" placeholder="Password" />
-        <button onclick="signUp()">Sign Up</button>
-        <button onclick="toggleSignup()">Back to Login</button>
+        <button onclick="register()">Register</button>
+        <div id="auth-message"></div>
     </div>
 
     <!-- Start Screen -->
-    <div id="start-screen">
-        <div class="img-responsive">
-            <div class="tenor-gif-embed" data-postid="4447334481024932830" data-share-method="host" data-aspect-ratio="0.628514" data-width="100%">
-                <a href="https://tenor.com/view/math-mathematics-math-gif-math-love-i-love-math-gif-4447334481024932830">Math Mathematics GIF</a> from <a href="https://tenor.com/search/math-gifs">Math GIFs</a>
-            </div>
-            <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
-        </div>
-
+    <div id="start-screen" style="display:none;">
         <label for="name">Enter your name:</label>
         <input type="text" id="player-name" placeholder="Your Name" />
         <br><br>
@@ -118,7 +99,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js"></script>
 <script>
-    // Your web app's Firebase configuration
+    // Your Firebase configuration
     const firebaseConfig = {
         apiKey: "AIzaSyCScIv8hwAUw9L_EOqWtJKdbKPa-8vh-T8",
         authDomain: "mathsquiz-dbd61.firebaseapp.com",
@@ -132,6 +113,46 @@
     const app = firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
+    // User state change observer
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'block';
+            document.getElementById('player-name').value = user.email; // Optional: Pre-fill with email
+        } else {
+            document.getElementById('login-screen').style.display = 'block';
+        }
+    });
+
+    // Login function
+    function login() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then(() => {
+                document.getElementById('auth-message').innerText = "Logged in successfully!";
+            })
+            .catch(error => {
+                document.getElementById('auth-message').innerText = error.message;
+            });
+    }
+
+    // Registration function
+    function register() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .then(() => {
+                document.getElementById('auth-message').innerText = "Registered successfully!";
+            })
+            .catch(error => {
+                document.getElementById('auth-message').innerText = error.message;
+            });
+    }
+
+    // Quiz logic here
     let playerName = '';
     let questions = [];
     let currentQuestionIndex = 0;
@@ -139,46 +160,6 @@
     let timeLeft = 600; // 10 minutes (600 seconds)
     let timerInterval;
     let selectedGrade = 1;
-
-    // Show the authentication screen
-    window.onload = function() {
-        document.getElementById('auth-container').style.display = 'block';
-    };
-
-    function toggleSignup() {
-        const authContainer = document.getElementById('auth-container');
-        const signupContainer = document.getElementById('signup-container');
-        authContainer.style.display = authContainer.style.display === 'none' ? 'block' : 'none';
-        signupContainer.style.display = signupContainer.style.display === 'none' ? 'block' : 'none';
-    }
-
-    function signUp() {
-        const email = document.getElementById('signup-email').value;
-        const password = document.getElementById('signup-password').value;
-
-        auth.createUserWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-                alert("Account created successfully!");
-                toggleSignup(); // Switch to login screen
-            })
-            .catch((error) => {
-                alert(error.message);
-            });
-    }
-
-    function login() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-
-        auth.signInWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-                document.getElementById('auth-container').style.display = 'none';
-                startQuiz(); // Start quiz on successful login
-            })
-            .catch((error) => {
-                alert(error.message);
-            });
-    }
 
     // Generate random math questions based on grade
     function generateQuestions() {
@@ -224,4 +205,1005 @@
 
     // Display the current question
     function displayQuestion() {
-        const question = questions
+        const question = questions[currentQuestionIndex];
+        document.getElementById('question').innerText = `${question.num1} ${question.operator} ${question.num2} = ?`;
+    }
+
+    // Submit the answer
+    function submitAnswer() {
+        const userAnswer = parseInt(document.getElementById('answer').value);
+        const correctAnswer = questions[currentQuestionIndex].answer;
+        if (userAnswer === correctAnswer) {
+            score += 1;
+            document.getElementById('result').innerText = "Correct!";
+        } else {
+            document.getElementById('result').innerText = `Wrong! The correct answer was ${correctAnswer}`;
+        }
+        document.getElementById('score').innerText = `Score: ${score}`;
+        document.getElementById('answer').value = ''; // Clear input
+        currentQuestionIndex++;
+
+        if (currentQuestionIndex < questions.length) {
+            displayQuestion();
+        } else {
+            endQuiz();
+        }
+    }
+
+    // Start the timer
+    function startHere's the complete and corrected version of your `index.html` file, which integrates Firebase authentication with your quiz functionality. 
+
+### Complete `index.html`
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Quiz Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .question, .result, .time {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        input, select {
+            font-size: 18px;
+            padding: 5px;
+            width: 200px;
+            margin-top: 10px;
+        }
+        .start-button {
+            padding: 15px 30px;
+        }
+        .img-responsive {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Math Quiz Game</h1>
+
+    <!-- Login Screen -->
+    <div id="login-screen">
+        <h2>Login</h2>
+        <input type="email" id="email" placeholder="Email" />
+        <input type="password" id="password" placeholder="Password" />
+        <button onclick="login()">Login</button>
+        <button onclick="register()">Register</button>
+        <div id="auth-message"></div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" style="display:none;">
+        <label for="name">Enter your name:</label>
+        <input type="text" id="player-name" placeholder="Your Name" />
+        <br><br>
+
+        <label for="grade">Select your grade:</label>
+        <select id="grade">
+            <option value="1">1st Grade</option>
+            <option value="2">2nd Grade</option>
+            <option value="3">3rd Grade</option>
+            <option value="4">4th Grade</option>
+            <option value="5">5th Grade</option>
+        </select>
+        <br><br>
+
+        <button class="start-button" onclick="startQuiz()">Start Quiz</button>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz-screen" style="display:none;">
+        <div class="time" id="time">Time left: 10:00</div>
+        <div class="question" id="question"></div>
+        <input type="number" id="answer" placeholder="Your answer" />
+        <button onclick="submitAnswer()">Submit</button>
+        <div class="result" id="result"></div>
+        <div id="score">Score: 0</div>
+    </div>
+
+    <!-- End Screen -->
+    <div id="end-screen" style="display:none;">
+        <h2>Quiz Finished!</h2>
+        <div id="final-score"></div>
+        <button onclick="location.reload()">Play Again</button>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js"></script>
+<script>
+    // Your Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyCScIv8hwAUw9L_EOqWtJKdbKPa-8vh-T8",
+        authDomain: "mathsquiz-dbd61.firebaseapp.com",
+        projectId: "mathsquiz-dbd61",
+        storageBucket: "mathsquiz-dbd61.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "1:582675845564:web:840669cdd7443ba3101bb9"
+    };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // User state change observer
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'block';
+            document.getElementById('player-name').value = user.email; // Optional: Pre-fill with email
+        } else {
+            document.getElementById('login-screen').style.display = 'block';
+        }
+    });
+
+    // Login function
+    function login() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then(() => {
+                document.getElementById('auth-message').innerText = "Logged in successfully!";
+            })
+            .catch(error => {
+                document.getElementById('auth-message').innerText = error.message;
+            });
+    }
+
+    // Registration function
+    function register() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .then(() => {
+                document.getElementById('auth-message').innerText = "Registered successfully!";
+            })
+            .catch(error => {
+                document.getElementById('auth-message').innerText = error.message;
+            });
+    }
+
+    // Quiz logic here
+    let playerName = '';
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let timeLeft = 600; // 10 minutes (600 seconds)
+    let timerInterval;
+    let selectedGrade = 1;
+
+    // Generate random math questions based on grade
+    function generateQuestions() {
+        questions = []; // Clear previous questions
+        const operatorsByGrade = {
+            1: ['+', '-'], // 1st grade: only addition and subtraction
+            2: ['+', '-', '*'], // 2nd grade: addition, subtraction, multiplication
+            3: ['+', '-', '*', '/'] // 3rd grade and above: all operations
+        };
+        const operators = operatorsByGrade[selectedGrade] || operatorsByGrade[3]; // Default to full set for older grades
+
+        for (let i = 0; i < 20; i++) {
+            const num1 = Math.floor(Math.random() * 100) + 1;
+            const num2 = Math.floor(Math.random() * 10) + 1;
+            const operator = operators[Math.floor(Math.random() * operators.length)];
+            let answer;
+            switch (operator) {
+                case '+': answer = num1 + num2; break;
+                case '-': answer = num1 - num2; break;
+                case '*': answer = num1 * num2; break;
+                case '/': answer = Math.floor(num1 / num2); break; // Use floor for integer answers
+            }
+            questions.push({ num1, num2, operator, answer });
+        }
+    }
+
+    // Start the quiz
+    function startQuiz() {
+        playerName = document.getElementById('player-name').value;
+        selectedGrade = parseInt(document.getElementById('grade').value);
+
+        if (!playerName) {
+            alert("Please enter your name to start the quiz.");
+            return;
+        }
+
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'block';
+        generateQuestions();
+        displayQuestion();
+        startTimer();
+    }
+
+    // Display the current question
+    function displayQuestion() {
+        const question = questions[currentQuestionIndex];
+        document.getElementById('question').innerText = `${question.num1} ${question.operator} ${question.num2} = ?`;
+    }
+
+    // Submit the answer
+    function submitAnswer() {
+        const userAnswer = parseInt(document.getElementById('answer').value);
+        const correctAnswer = questions[currentQuestionIndex].answer;
+        if (userAnswer === correctAnswer) {
+            score += 1;
+            document.getElementById('result').innerText = "Correct!";
+        } else {
+            document.getElementById('result').innerText = `Wrong! The correct answer was ${correctAnswer}`;
+        }
+        document.getElementById('score').innerText = `Score: ${score}`;
+        document.getElementById('answer').value = ''; // Clear input
+        currentQuestionIndex++;
+
+        if (currentQuestionIndex < questions.length) {
+            displayQuestion();
+        } else {
+            endQuiz();
+        }
+    }
+
+    // Start the timer
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('time').innerText = `Time left: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+Here's the complete and corrected version of your `index.html` file, which integrates Firebase authentication with your quiz functionality.
+
+### Complete `index.html`
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Quiz Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .question, .result, .time {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        input, select {
+            font-size: 18px;
+            padding: 5px;
+            width: 200px;
+            margin-top: 10px;
+        }
+        .start-button {
+            padding: 15px 30px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Math Quiz Game</h1>
+
+    <!-- Login Screen -->
+    <div id="login-screen">
+        <h2>Login</h2>
+        <input type="email" id="email" placeholder="Email" />
+        <input type="password" id="password" placeholder="Password" />
+        <button onclick="login()">Login</button>
+        <button onclick="register()">Register</button>
+        <div id="auth-message"></div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" style="display:none;">
+        <label for="name">Enter your name:</label>
+        <input type="text" id="player-name" placeholder="Your Name" />
+        <br><br>
+
+        <label for="grade">Select your grade:</label>
+        <select id="grade">
+            <option value="1">1st Grade</option>
+            <option value="2">2nd Grade</option>
+            <option value="3">3rd Grade</option>
+            <option value="4">4th Grade</option>
+            <option value="5">5th Grade</option>
+        </select>
+        <br><br>
+
+        <button class="start-button" onclick="startQuiz()">Start Quiz</button>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz-screen" style="display:none;">
+        <div class="time" id="time">Time left: 10:00</div>
+        <div class="question" id="question"></div>
+        <input type="number" id="answer" placeholder="Your answer" />
+        <button onclick="submitAnswer()">Submit</button>
+        <div class="result" id="result"></div>
+        <div id="score">Score: 0</div>
+    </div>
+
+    <!-- End Screen -->
+    <div id="end-screen" style="display:none;">
+        <h2>Quiz Finished!</h2>
+        <div id="final-score"></div>
+        <button onclick="location.reload()">Play Again</button>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js"></script>
+<script>
+    // Your Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyCScIv8hwAUw9L_EOqWtJKdbKPa-8vh-T8",
+        authDomain: "mathsquiz-dbd61.firebaseapp.com",
+        projectId: "mathsquiz-dbd61",
+        storageBucket: "mathsquiz-dbd61.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "1:582675845564:web:840669cdd7443ba3101bb9"
+    };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // User state change observer
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'block';
+            document.getElementById('player-name').value = user.email; // Optional: Pre-fill with email
+        } else {
+            document.getElementById('login-screen').style.display = 'block';
+        }
+    });
+
+    // Login function
+    function login() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then(() => {
+                document.getElementById('auth-message').innerText = "Logged in successfully!";
+            })
+            .catch(error => {
+                document.getElementById('auth-message').innerText = error.message;
+            });
+    }
+
+    // Registration function
+    function register() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .then(() => {
+                document.getElementById('auth-message').innerText = "Registered successfully!";
+            })
+            .catch(error => {
+                document.getElementById('auth-message').innerText = error.message;
+            });
+    }
+
+    // Quiz logic here
+    let playerName = '';
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let timeLeft = 600; // 10 minutes (600 seconds)
+    let timerInterval;
+    let selectedGrade = 1;
+
+    // Generate random math questions based on grade
+    function generateQuestions() {
+        questions = []; // Clear previous questions
+        const operatorsByGrade = {
+            1: ['+', '-'], // 1st grade: only addition and subtraction
+            2: ['+', '-', '*'], // 2nd grade: addition, subtraction, multiplication
+            3: ['+', '-', '*', '/'] // 3rd grade and above: all operations
+        };
+        const operators = operatorsByGrade[selectedGrade] || operatorsByGrade[3]; // Default to full set for older grades
+
+        for (let i = 0; i < 20; i++) {
+            const num1 = Math.floor(Math.random() * 100) + 1;
+            const num2 = Math.floor(Math.random() * 10) + 1;
+            const operator = operators[Math.floor(Math.random() * operators.length)];
+            let answer;
+            switch (operator) {
+                case '+': answer = num1 + num2; break;
+                case '-': answer = num1 - num2; break;
+                case '*': answer = num1 * num2; break;
+                case '/': answer = Math.floor(num1 / num2); break; // Use floor for integer answers
+            }
+            questions.push({ num1, num2, operator, answer });
+        }
+    }
+
+    // Start the quiz
+    function startQuiz() {
+        playerName = document.getElementById('player-name').value;
+        selectedGrade = parseInt(document.getElementById('grade').value);
+
+        if (!playerName) {
+            alert("Please enter your name to start the quiz.");
+            return;
+        }
+
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'block';
+        generateQuestions();
+        displayQuestion();
+        startTimer();
+    }
+
+    // Display the current question
+    function displayQuestion() {
+        const question = questions[currentQuestionIndex];
+        document.getElementById('question').innerText = `${question.num1} ${question.operator} ${question.num2} = ?`;
+    }
+
+    // Submit the answer
+    function submitAnswer() {
+        const userAnswer = parseInt(document.getElementById('answer').value);
+        const correctAnswer = questions[currentQuestionIndex].answer;
+        if (userAnswer === correctAnswer) {
+            score += 1;
+            document.getElementById('result').innerText = "Correct!";
+        } else {
+            document.getElementById('result').innerText = `Wrong! The correct answer was ${correctAnswer}`;
+        }
+        document.getElementById('score').innerText = `Score: ${score}`;
+        document.getElementById('answer').value = ''; // Clear input
+        currentQuestionIndex++;
+
+        if (currentQuestionIndex < questions.length) {
+            displayQuestion();
+        } else {
+            endQuiz();
+        }
+    }
+
+    // Start the timer
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('time').innerText = `Time left: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+Here’s the complete and corrected version of your `index.html` file, integrating Firebase authentication with your quiz functionality:
+
+### Complete `index.html`
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Quiz Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .question, .result, .time {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        input, select {
+            font-size: 18px;
+            padding: 5px;
+            width: 200px;
+            margin-top: 10px;
+        }
+        .start-button {
+            padding: 15px 30px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Math Quiz Game</h1>
+
+    <!-- Login Screen -->
+    <div id="login-screen">
+        <h2>Login</h2>
+        <input type="email" id="email" placeholder="Email" />
+        <input type="password" id="password" placeholder="Password" />
+        <button onclick="login()">Login</button>
+        <button onclick="register()">Register</button>
+        <div id="auth-message"></div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" style="display:none;">
+        <label for="name">Enter your name:</label>
+        <input type="text" id="player-name" placeholder="Your Name" />
+        <br><br>
+
+        <label for="grade">Select your grade:</label>
+        <select id="grade">
+            <option value="1">1st Grade</option>
+            <option value="2">2nd Grade</option>
+            <option value="3">3rd Grade</option>
+            <option value="4">4th Grade</option>
+            <option value="5">5th Grade</option>
+        </select>
+        <br><br>
+
+        <button class="start-button" onclick="startQuiz()">Start Quiz</button>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz-screen" style="display:none;">
+        <div class="time" id="time">Time left: 10:00</div>
+        <div class="question" id="question"></div>
+        <input type="number" id="answer" placeholder="Your answer" />
+        <button onclick="submitAnswer()">Submit</button>
+        <div class="result" id="result"></div>
+        <div id="score">Score: 0</div>
+    </div>
+
+    <!-- End Screen -->
+    <div id="end-screen" style="display:none;">
+        <h2>Quiz Finished!</h2>
+        <div id="final-score"></div>
+        <button onclick="location.reload()">Play Again</button>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js"></script>
+<script>
+    // Your Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyCScIv8hwAUw9L_EOqWtJKdbKPa-8vh-T8",
+        authDomain: "mathsquiz-dbd61.firebaseapp.com",
+        projectId: "mathsquiz-dbd61",
+        storageBucket: "mathsquiz-dbd61.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "1:582675845564:web:840669cdd7443ba3101bb9"
+    };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // User state change observer
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'block';
+            document.getElementById('player-name').value = user.email; // Optional: Pre-fill with email
+        } else {
+            document.getElementById('login-screen').style.display = 'block';
+        }
+    });
+
+    // Login function
+    function login() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then(() => {
+                document.getElementById('auth-message').innerText = "Logged in successfully!";
+            })
+            .catch(error => {
+                document.getElementById('auth-message').innerText = error.message;
+            });
+    }
+
+    // Registration function
+    function register() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .then(() => {
+                document.getElementById('auth-message').innerText = "Registered successfully!";
+            })
+            .catch(error => {
+                document.getElementById('auth-message').innerText = error.message;
+            });
+    }
+
+    // Quiz logic here
+    let playerName = '';
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let timeLeft = 600; // 10 minutes (600 seconds)
+    let timerInterval;
+    let selectedGrade = 1;
+
+    // Generate random math questions based on grade
+    function generateQuestions() {
+        questions = []; // Clear previous questions
+        const operatorsByGrade = {
+            1: ['+', '-'], // 1st grade: only addition and subtraction
+            2: ['+', '-', '*'], // 2nd grade: addition, subtraction, multiplication
+            3: ['+', '-', '*', '/'] // 3rd grade and above: all operations
+        };
+        const operators = operatorsByGrade[selectedGrade] || operatorsByGrade[3]; // Default to full set for older grades
+
+        for (let i = 0; i < 20; i++) {
+            const num1 = Math.floor(Math.random() * 100) + 1;
+            const num2 = Math.floor(Math.random() * 10) + 1;
+            const operator = operators[Math.floor(Math.random() * operators.length)];
+            let answer;
+            switch (operator) {
+                case '+': answer = num1 + num2; break;
+                case '-': answer = num1 - num2; break;
+                case '*': answer = num1 * num2; break;
+                case '/': answer = Math.floor(num1 / num2); break; // Use floor for integer answers
+            }
+            questions.push({ num1, num2, operator, answer });
+        }
+    }
+
+    // Start the quiz
+    function startQuiz() {
+        playerName = document.getElementById('player-name').value;
+        selectedGrade = parseInt(document.getElementById('grade').value);
+
+        if (!playerName) {
+            alert("Please enter your name to start the quiz.");
+            return;
+        }
+
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'block';
+        generateQuestions();
+        displayQuestion();
+        startTimer();
+    }
+
+    // Display the current question
+    function displayQuestion() {
+        const question = questions[currentQuestionIndex];
+        document.getElementById('question').innerText = `${question.num1} ${question.operator} ${question.num2} = ?`;
+    }
+
+    // Submit the answer
+    function submitAnswer() {
+        const userAnswer = parseInt(document.getElementById('answer').value);
+        const correctAnswer = questions[currentQuestionIndex].answer;
+        if (userAnswer === correctAnswer) {
+            score += 1;
+            document.getElementById('result').innerText = "Correct!";
+        } else {
+            document.getElementById('result').innerText = `Wrong! The correct answer was ${correctAnswer}`;
+        }
+        document.getElementById('score').innerText = `Score: ${score}`;
+        document.getElementById('answer').value = ''; // Clear input
+        currentQuestionIndex++;
+
+        if (currentQuestionIndex < questions.length) {
+            displayQuestion();
+        } else {
+            endQuiz();
+        }
+    }
+
+    // Start the timer
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('time').innerText = `Time left: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+Here’s the complete and corrected version of your `index.html` file, integrating Firebase authentication with your quiz functionality:
+
+### Complete `index.html`
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Quiz Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .question, .result, .time {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        input, select {
+            font-size: 18px;
+            padding: 5px;
+            width: 200px;
+            margin-top: 10px;
+        }
+        .start-button {
+            padding: 15px 30px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Math Quiz Game</h1>
+
+    <!-- Login Screen -->
+    <div id="login-screen">
+        <h2>Login</h2>
+        <input type="email" id="email" placeholder="Email" />
+        <input type="password" id="password" placeholder="Password" />
+        <button onclick="login()">Login</button>
+        <button onclick="register()">Register</button>
+        <div id="auth-message"></div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" style="display:none;">
+        <label for="name">Enter your name:</label>
+        <input type="text" id="player-name" placeholder="Your Name" />
+        <br><br>
+
+        <label for="grade">Select your grade:</label>
+        <select id="grade">
+            <option value="1">1st Grade</option>
+            <option value="2">2nd Grade</option>
+            <option value="3">3rd Grade</option>
+            <option value="4">4th Grade</option>
+            <option value="5">5th Grade</option>
+        </select>
+        <br><br>
+
+        <button class="start-button" onclick="startQuiz()">Start Quiz</button>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz-screen" style="display:none;">
+        <div class="time" id="time">Time left: 10:00</div>
+        <div class="question" id="question"></div>
+        <input type="number" id="answer" placeholder="Your answer" />
+        <button onclick="submitAnswer()">Submit</button>
+        <div class="result" id="result"></div>
+        <div id="score">Score: 0</div>
+    </div>
+
+    <!-- End Screen -->
+    <div id="end-screen" style="display:none;">
+        <h2>Quiz Finished!</h2>
+        <div id="final-score"></div>
+        <button onclick="location.reload()">Play Again</button>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js"></script>
+<script>
+    // Your Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyCScIv8hwAUw9L_EOqWtJKdbKPa-8vh-T8",
+        authDomain: "mathsquiz-dbd61.firebaseapp.com",
+        projectId: "mathsquiz-dbd61",
+        storageBucket: "mathsquiz-dbd61.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "1:582675845564:web:840669cdd7443ba3101bb9"
+    };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // User state change observer
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'block';
+            document.getElementById('player-name').value = user.email; // Optional: Pre-fill with email
+        } else {
+            document.getElementById('login-screen').style.display = 'block';
+        }
+    });
+
+    // Login function
+    function login() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then(() => {
+                document.getElementById('auth-message').innerText = "Logged in successfully!";
+            })
+            .catch(error => {
+                document.getElementById('auth-message').innerText = error.message;
+            });
+    }
+
+    // Registration function
+    function register() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .then(() => {
+                document.getElementById('auth-message').innerText = "Registered successfully!";
+            })
+            .catch(error => {
+                document.getElementById('auth-message').innerText = error.message;
+            });
+    }
+
+    // Quiz logic here
+    let playerName = '';
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let timeLeft = 600; // 10 minutes (600 seconds)
+    let timerInterval;
+    let selectedGrade = 1;
+
+    // Generate random math questions based on grade
+    function generateQuestions() {
+        questions = []; // Clear previous questions
+        const operatorsByGrade = {
+            1: ['+', '-'], // 1st grade: only addition and subtraction
+            2: ['+', '-', '*'], // 2nd grade: addition, subtraction, multiplication
+            3: ['+', '-', '*', '/'] // 3rd grade and above: all operations
+        };
+        const operators = operatorsByGrade[selectedGrade] || operatorsByGrade[3]; // Default to full set for older grades
+
+        for (let i = 0; i < 20; i++) {
+            const num1 = Math.floor(Math.random() * 100) + 1;
+            const num2 = Math.floor(Math.random() * 10) + 1;
+            const operator = operators[Math.floor(Math.random() * operators.length)];
+            let answer;
+            switch (operator) {
+                case '+': answer = num1 + num2; break;
+                case '-': answer = num1 - num2; break;
+                case '*': answer = num1 * num2; break;
+                case '/': answer = Math.floor(num1 / num2); break; // Use floor for integer answers
+            }
+            questions.push({ num1, num2, operator, answer });
+        }
+    }
+
+    // Start the quiz
+    function startQuiz() {
+        playerName = document.getElementById('player-name').value;
+        selectedGrade = parseInt(document.getElementById('grade').value);
+
+        if (!playerName) {
+            alert("Please enter your name to start the quiz.");
+            return;
+        }
+
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'block';
+        generateQuestions();
+        displayQuestion();
+        startTimer();
+    }
+
+    // Display the current question
+    function displayQuestion() {
+        const question = questions[currentQuestionIndex];
+        document.getElementById('question').innerText = `${question.num1} ${question.operator} ${question.num2} = ?`;
+    }
+
+    // Submit the answer
+    function submitAnswer() {
+        const userAnswer = parseInt(document.getElementById('answer').value);
+        const correctAnswer = questions[currentQuestionIndex].answer;
+        if (userAnswer === correctAnswer) {
+            score += 1;
+            document.getElementById('result').innerText = "Correct!";
+        } else {
+            document.getElementById('result').innerText = `Wrong! The correct answer was ${correctAnswer}`;
+        }
+        document.getElementById('score').innerText = `Score: ${score}`;
+        document.getElementById('answer').value = ''; // Clear input
+        currentQuestionIndex++;
+
+        if (currentQuestionIndex < questions.length) {
+            displayQuestion();
+        } else {
+            endQuiz();
+        }
+    }
+
+    // Start the timer
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('time').innerText = `Time left: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
