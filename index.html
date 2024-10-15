@@ -49,29 +49,20 @@
 <div class="container">
     <h1>Math Quiz Game</h1>
 
-    <!-- Registration Screen -->
-    <div id="register-screen">
-        <h2>Register</h2>
-        <input type="email" id="register-email" placeholder="Email" required />
-        <input type="password" id="register-password" placeholder="Password" required />
-        <button onclick="register()">Register</button>
-        <p>Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
-    </div>
-
-    <!-- Login Screen -->
-    <div id="login-screen" style="display:none;">
-        <h2>Login</h2>
-        <input type="email" id="login-email" placeholder="Email" required />
-        <input type="password" id="login-password" placeholder="Password" required />
-        <button onclick="login()">Login</button>
-        <p>Don't have an account? <a href="#" onclick="showRegister()">Register</a></p>
-    </div>
-
     <!-- Start Screen -->
-    <div id="start-screen" style="display:none;">
+    <div id="start-screen">
+        <div class="img-responsive">
+            <div class="tenor-gif-embed" data-postid="4447334481024932830" data-share-method="host" data-aspect-ratio="0.628514" data-width="100%">
+                <a href="https://tenor.com/view/math-mathematics-math-gif-math-love-i-love-math-gif-4447334481024932830">Math Mathematics GIF</a> from <a href="https://tenor.com/search/math-gifs">Math GIFs</a>
+            </div>
+            <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+        </div>
+
         <label for="name">Enter your name:</label>
         <input type="text" id="player-name" placeholder="Your Name" />
         <br><br>
+
+        <!-- Grade or Age Input -->
         <label for="grade">Select your grade:</label>
         <select id="grade">
             <option value="1">1st Grade</option>
@@ -81,6 +72,7 @@
             <option value="5">5th Grade</option>
         </select>
         <br><br>
+
         <button class="start-button" onclick="startQuiz()">Start Quiz</button>
     </div>
 
@@ -102,91 +94,14 @@
     </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js"></script>
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyCScIv8hwAUw9L_EOqWtJKdbKPa-8vh-T8",
-        authDomain: "mathsquiz-dbd61.firebaseapp.com",
-        projectId: "mathsquiz-dbd61",
-        storageBucket: "mathsquiz-dbd61.appspot.com",
-        messagingSenderId: "582675845564",
-        appId: "1:582675845564:web:840669cdd7443ba3101bb9",
-        measurementId: "G-T9EKR36KTQ"
-    };
-
-    // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-
-    // Show the register screen
-    function showRegister() {
-        document.getElementById('register-screen').style.display = 'block';
-        document.getElementById('login-screen').style.display = 'none';
-    }
-
-    // Show the login screen
-    function showLogin() {
-        document.getElementById('register-screen').style.display = 'none';
-        document.getElementById('login-screen').style.display = 'block';
-    }
-
-    // Start the quiz after login
-    function startQuiz() {
-        const playerName = document.getElementById('player-name').value;
-        const selectedGrade = parseInt(document.getElementById('grade').value);
-        if (!playerName) {
-            alert("Please enter your name to start the quiz.");
-            return;
-        }
-        // Store player name and grade in sessionStorage
-        sessionStorage.setItem('playerName', playerName);
-        sessionStorage.setItem('selectedGrade', selectedGrade);
-        
-        document.getElementById('start-screen').style.display = 'none';
-        document.getElementById('quiz-screen').style.display = 'block';
-        generateQuestions();
-        displayQuestion();
-        startTimer();
-    }
-
-    // Registration function
-    function register() {
-        const email = document.getElementById('register-email').value;
-        const password = document.getElementById('register-password').value;
-
-        auth.createUserWithEmailAndPassword(email, password)
-            .then(() => {
-                alert("Registration successful!");
-                showLogin(); // Show login screen after registration
-            })
-            .catch((error) => {
-                alert("Error: " + error.message);
-            });
-    }
-
-    // Login function
-    function login() {
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-
-        auth.signInWithEmailAndPassword(email, password)
-            .then(() => {
-                alert("Login successful!");
-                // Show the start screen after successful login
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('start-screen').style.display = 'block';
-            })
-            .catch((error) => {
-                alert("Error: " + error.message);
-            });
-    }
-
+    let playerName = '';
     let questions = [];
     let currentQuestionIndex = 0;
     let score = 0;
     let timeLeft = 600; // 10 minutes (600 seconds)
     let timerInterval;
+    let selectedGrade = 1;
 
     // Generate random math questions based on grade
     function generateQuestions() {
@@ -196,7 +111,6 @@
             2: ['+', '-', '*'], // 2nd grade: addition, subtraction, multiplication
             3: ['+', '-', '*', '/'] // 3rd grade and above: all operations
         };
-        const selectedGrade = parseInt(sessionStorage.getItem('selectedGrade'));
         const operators = operatorsByGrade[selectedGrade] || operatorsByGrade[3]; // Default to full set for older grades
 
         for (let i = 0; i < 20; i++) {
@@ -214,41 +128,48 @@
         }
     }
 
+    // Start the quiz
+    function startQuiz() {
+        playerName = document.getElementById('player-name').value;
+        selectedGrade = parseInt(document.getElementById('grade').value);
+
+        if (!playerName) {
+            alert("Please enter your name to start the quiz.");
+            return;
+        }
+
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'block';
+        generateQuestions();
+        displayQuestion();
+        startTimer();
+    }
+
     // Display the current question
     function displayQuestion() {
         const question = questions[currentQuestionIndex];
         document.getElementById('question').innerText = `${question.num1} ${question.operator} ${question.num2} = ?`;
     }
-	
+
     // Submit the answer
     function submitAnswer() {
         const userAnswer = parseInt(document.getElementById('answer').value);
-        const currentQuestion = questions[currentQuestionIndex];
-
-        if (userAnswer === currentQuestion.answer) {
-            score++;
+        const correctAnswer = questions[currentQuestionIndex].answer;
+        if (userAnswer === correctAnswer) {
+            score += 1;
             document.getElementById('result').innerText = "Correct!";
         } else {
-            document.getElementById('result').innerText = `Wrong! Correct answer was ${currentQuestion.answer}.`;
+            document.getElementById('result').innerText = `Wrong! The correct answer was ${correctAnswer}`;
         }
-
+        document.getElementById('score').innerText = `Score: ${score}`;
+        document.getElementById('answer').value = ''; // Clear input
         currentQuestionIndex++;
 
-        // Check if there are more questions
         if (currentQuestionIndex < questions.length) {
-            document.getElementById('answer').value = ''; // Clear input
             displayQuestion();
         } else {
             endQuiz();
         }
-    }
-
-    // End the quiz
-    function endQuiz() {
-        clearInterval(timerInterval);
-        document.getElementById('quiz-screen').style.display = 'none';
-        document.getElementById('end-screen').style.display = 'block';
-        document.getElementById('final-score').innerText = `Your final score is ${score} out of ${questions.length}`;
     }
 
     // Start the timer
@@ -262,6 +183,14 @@
                 endQuiz();
             }
         }, 1000);
+    }
+
+    // End the quiz
+    function endQuiz() {
+        clearInterval(timerInterval);
+        document.getElementById('quiz-screen').style.display = 'none';
+        document.getElementById('end-screen').style.display = 'block';
+        document.getElementById('final-score').innerText = `${playerName}, you scored: ${score}/20`;
     }
 </script>
 
